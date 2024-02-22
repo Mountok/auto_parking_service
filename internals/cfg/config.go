@@ -19,12 +19,12 @@ type Cfg struct {
 func LoadAndStoreConfig() Cfg {
 	v := viper.New()
 	v.SetEnvPrefix("SERV")
-	v.SetDefault("PORT", "8080")
-	v.SetDefault("DBNAME", "parking_database")
-	v.SetDefault("DBUSER", "postgres")
-	v.SetDefault("DBPASS", "mount7890")
-	v.SetDefault("DBHOST", "localhost")
-	v.SetDefault("DBPORT", "5432")
+	v.SetDefault("PORT", "8080") // порт сервера
+	v.SetDefault("DBNAME", "parking_database") // название базыданных
+	v.SetDefault("DBUSER", "postgres") // пользователь бд
+	v.SetDefault("DBPASS", "mount7890") // пароль
+	v.SetDefault("DBHOST", "localhost") // хост
+	v.SetDefault("DBPORT", "5432") // порт бд по дефолту 5432 в psql
 	v.AutomaticEnv()
 
 	var cfg Cfg
@@ -38,5 +38,6 @@ func LoadAndStoreConfig() Cfg {
 }
 
 func (cfg *Cfg) GetDBString() string {
+	
 	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s", cfg.DbUser, cfg.DbPass, cfg.DbHost,cfg.DbPort,cfg.DbName)
 }

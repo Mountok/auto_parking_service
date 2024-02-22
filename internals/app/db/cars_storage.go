@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go_service_parking/example/internals/app/models"
-	log "github.com/sirupsen/logrus"
 	"github.com/georgysavva/scany/pgxscan"
 	"github.com/jackc/pgx/v4/pgxpool"
+	log "github.com/sirupsen/logrus"
+	"go_service_parking/example/internals/app/models"
 )
 
 type CarsStorage struct {
@@ -15,29 +15,28 @@ type CarsStorage struct {
 }
 
 type userCar struct {
-	UserId int64 `db:"user_id"`
-	Name string
-	Rank string
-	CarId int64 `db:"carid"`
-	Brand string
-	Colour string
+	UserId       int64 `db:"userid"`
+	Name         string
+	Rank         string
+	CarId        int64 `db:"carid"`
+	Brand        string
+	Colour       string
 	LicensePlate string
 }
 
 func converteJoinedQueryToCar(input userCar) models.Car {
 	return models.Car{
-		Id: input.CarId,
-		Colour: input.Colour,
-		Brand: input.Brand,
+		Id:           input.CarId,
+		Colour:       input.Colour,
+		Brand:        input.Brand,
 		LicensePlate: input.LicensePlate,
 		Owner: models.User{
-			Id: input.UserId,
+			Id:   input.UserId,
 			Name: input.Name,
 			Rank: input.Rank,
 		},
 	}
 }
-
 
 func NewCarStorage(pool *pgxpool.Pool) *CarsStorage {
 	storage := new(CarsStorage)
@@ -45,41 +44,40 @@ func NewCarStorage(pool *pgxpool.Pool) *CarsStorage {
 	return storage
 }
 
+func (storage *CarsStorage) GetCarsList(userIdFilter int64, brandFilter, colourFilter, licenseFilter string) []models.Car {
+	query := "SELECT users.id AS userid, users.name, users.rank, c.id AS carid, c.brand, c.colour, c.license_plate FROM users JOIN cars c on users.id = c.user_id WHERE 1=1"
 
-func (storage *CarsStorage) GetCarsList(userIdFilter int64, brandFilter,colourFilter,licenseFilter string) []models.Car {
-	query := "SELECT user.id AS userid,user.name,user.rank, c.id AS carid, c.brand, c.colour, c.license_plate FROM users JOIN cars c on users.id = c.user_id WHERE 1=1"
-	
 	placeholderNum := 1
-	args := make([]interface{},0)
+	args := make([]interface{}, 0)
 	if userIdFilter != 0 {
-		query += fmt.Sprintf(" AND user.id = $%d",placeholderNum)
+		query += fmt.Sprintf(" AND user.id = $%d", placeholderNum)
 		args = append(args, userIdFilter)
 		placeholderNum++
 	}
 	if brandFilter != "" {
-		query += fmt.Sprintf(" AND brand LIKE = %d",placeholderNum)
+		query += fmt.Sprintf(" AND brand ILIKE $%d", placeholderNum)
 		args = append(args, fmt.Sprintf("%%%s%%", brandFilter))
 		placeholderNum++
 	}
 	if colourFilter != "" {
-		query += fmt.Sprintf(" AND colour LIKE %d",placeholderNum)
+		query += fmt.Sprintf(" AND colour ILIKE $%d", placeholderNum)
 		args = append(args, fmt.Sprintf("%%%s%%", colourFilter))
 		placeholderNum++
 	}
 	if licenseFilter != "" {
-		query += fmt.Sprintf(" AND lecense_plate = %d",placeholderNum)
-		args = append(args,  fmt.Sprintf("%%%s%%", licenseFilter))
+		query += fmt.Sprintf(" AND license_plate ILIKE $%d", placeholderNum)
+		args = append(args, fmt.Sprintf("%%%s%%", licenseFilter))
 		placeholderNum++
 	}
 
 	var dbResult []userCar
 
-	err := pgxscan.Select(context.Background(),storage.databasePool,&dbResult,query,args...)
+	err := pgxscan.Select(context.Background(), storage.databasePool, &dbResult, query, args...)
 	if err != nil {
 		log.Errorln(err)
 	}
 
-	result := make([]models.Car,len(dbResult))
+	result := make([]models.Car, len(dbResult))
 
 	for idx, dbEntity := range dbResult {
 		result[idx] = converteJoinedQueryToCar(dbEntity)
@@ -89,15 +87,14 @@ func (storage *CarsStorage) GetCarsList(userIdFilter int64, brandFilter,colourFi
 }
 
 func (storage *CarsStorage) GetCarById(id int64) models.Car {
-	query := "SSELECT users.id AS userid, users.name, users.rank, c.id AS carid, c.brand, c.colour, c.license_plate FROM users JOIN cars c on users.id = c.user_id WHERE c.id = $1"
+	query := "SELECT users.id AS userid, users.name, users.rank, c.id AS carid, c.brand, c.colour, c.license_plate FROM users JOIN cars c on users.id = c.user_id WHERE c.id = $1"
 	var result userCar
-	err := pgxscan.Get(context.Background(),storage.databasePool,&result,query,id)
+	err := pgxscan.Get(context.Background(), storage.databasePool, &result, query, id)
 	if err != nil {
 		log.Errorln(err)
 	}
 	return converteJoinedQueryToCar(result)
 }
-
 
 func (storage *CarsStorage) CreateCar(car models.Car) error {
 	ctx := context.Background()
@@ -129,7 +126,7 @@ func (storage *CarsStorage) CreateCar(car models.Car) error {
 
 	insertQuery := "INSERT INTO cars(user_id, colour, brand, license_plate) VALUES ($1,$2,$3,$4)"
 
-	_, err = tx.Exec(context.Background(),insertQuery, car.Owner.Id, car.Colour, car.Brand, car.LicensePlate) //вызываем exec НЕ У соединения а У транзакции
+	_, err = tx.Exec(context.Background(), insertQuery, car.Owner.Id, car.Colour, car.Brand, car.LicensePlate) //вызываем exec НЕ У соединения а У транзакции
 
 	if err != nil {
 		log.Errorln(err)
@@ -146,4 +143,3 @@ func (storage *CarsStorage) CreateCar(car models.Car) error {
 
 	return err
 }
-

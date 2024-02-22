@@ -24,7 +24,7 @@ func NewUsersHandler(processor *processors.UsersProcessor) *UsersHandler {
 
 func (handler *UsersHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var newUser models.User
-	err := json.NewDecoder(r.Body).Decode(newUser)
+	err := json.NewDecoder(r.Body).Decode(&newUser)
 	if err != nil {
 		WrapError(w, err)
 		return
